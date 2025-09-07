@@ -1,0 +1,35 @@
+
+ [
+
+{
+   "id": "dibujo1",
+   "nombre": "Friends",
+   "precio": 14500
+},
+{
+   "id": "dibujo2" ,
+   "nombre": "Orgullo y prejuicio",
+   "precio": 16000
+},
+{
+   "id": "dibujo3",
+   "nombre": "Messi",
+   "precio": 20000
+},
+{
+   "id": "dibujo4",
+   "nombre": "Vista al mar",
+   "precio": 40000
+},
+{
+   "id": "dibujo5",
+   "nombre": "Lali",
+   "precio": 13000
+},
+{
+   "id": "dibujo6",
+   "nombre": "Pastor aleman",
+   "precio": 13000
+}
+
+]

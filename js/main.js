@@ -1,258 +1,95 @@
 
-// GALERÍA DE DIBUJOS
 
-let ListaDeObras = [];
-let idObra = 1;
+function dibujoChecker(dibujo) {
+   return new Promise((resolve, reject) => {
+     
+      if (dibujo.posicion > 1) {
+         return reject(`Todavía no tenemos stock de esta pieza "${dibujo.nombre}", pero la podes encargar.`);
+      }
+      setTimeout(() => {
+         resolve({
+            dibujo,
+            result: "Sí, la tenemos"
+         });
+      }, 1000);
+   });
+}
+(dibujoChecker(1)).then(data => console.log(data))
 
-// Función para agregar una obra a la galería
-function agregarObra() {
-    const titulo = document.getElementById("titulo").value;
-    const tecnica = document.getElementById("tecnica").value;
-    
-    if (titulo && artista && tecnica) {
-        document.getElementById("mensajeDeAlerta").innerText = "";
-        ListaDeObras.push({ 
-            id: idObra++, 
-            titulo: titulo, 
-            artista: artista, 
-            tecnica: tecnica,
-            valoracion: 0,
-            visitas: 0
-        });
-        document.getElementById("formObra").reset();
-    } else {
-        document.getElementById("mensajeDeAlerta").innerText = "Por favor, completa todos los campos.";
-        return;
-    }
+const dibujosContainer = document.getElementById("dibujos-container"); 
+const cartContainer = document.getElementById("cart-section");
+const URL = "./db/data.json";
+
+
+let cartDibujos = JSON.parse(localStorage.getItem("cartDibujos"));
+
+function obtenerDibujos() {
+   fetch(URL)
+   .then(response => response.json())
+   .then(data => {
+      renderDibujos(data);
+   })
+   .catch(err => console.error("Error al cargar dibujos:", err))
+   .finally(() => console.log("Fin de la petición"));
 }
 
-const botonAgregar = document.getElementById("agregarObra");
-if (botonAgregar) {
-    botonAgregar.onclick = () => {
-        agregarObra();
-        actualizarListaObras();
-    }
+function renderDibujos(listaDibujos) {
+   dibujosContainer.innerHTML = "";
+   listaDibujos.forEach(dibujo => {
+      const card = document.createElement("div");
+      card.innerHTML = `
+         <h3>${dibujo.nombre}</h3>
+         <p>Precio: ${dibujo.precio}</p>
+         <button class="dibujoAgregar" id="${dibujo.id}">Agregar</button>
+      `;
+      dibujosContainer.appendChild(card);
+   });
+   agregarAlCarrito(listaDibujos);
 }
 
-// Función para eliminar todas las obras
-function eliminarObras() {
-    if (ListaDeObras.length === 0) {
-        document.getElementById("mensajeDeAlerta").innerText = "No hay obras para eliminar.";
-        return;
-    }
-    if (ListaDeObras.length >= 8) {
-        localStorage.clear();
-    }
-    ListaDeObras = [];
-    document.getElementById("formObra").reset();
-    document.getElementById("mensajeDeAlerta").innerText = "Todas las obras han sido eliminadas.";
-    
-    const botonExposicion = document.getElementById("botonExposicion");
-    if (botonExposicion) {
-        formulario.removeChild(botonExposicion.parentElement);
-    }
-    
-    if (botonAgregar && document.getElementById("borrarObras")) {
-        formulario.insertBefore(botonAgregar, document.getElementById("borrarObras"));
-    }
-    
-    actualizarListaObras();
-}
-
-const botonEliminar = document.getElementById("borrarObras");
-if (botonEliminar) {
-    botonEliminar.onclick = () => {
-        eliminarObras();
-    }
-}
-
-let formulario = document.getElementById("formObra");
-let tituloObrasRegistradas = document.getElementById("tituloObrasRegistradas");
-let listaDeObras = document.getElementById("listaObras");
-
-// Función para actualizar la lista de obras
-if (tituloObrasRegistradas) {
-    function actualizarListaObras() {
-        listaDeObras.textContent = "";
-        
-        ListaDeObras.forEach(obra => {
-            let divObra = document.createElement("div");
-            divObra.className = "obra-card";
-            
-            let titulo = document.createElement("h3");
-            titulo.textContent = obra.titulo;
-            
-            let artista = document.createElement("p");
-            artista.textContent = `Artista: ${obra.artista}`;
-            
-            let tecnica = document.createElement("p");
-            tecnica.textContent = `Técnica: ${obra.tecnica}`;
-            
-            divObra.appendChild(titulo);
-            divObra.appendChild(artista);
-            divObra.appendChild(tecnica);
-            
-            let imgObra = document.createElement("img");
-            imgObra.src = "https://placehold.co/300x200";
-            imgObra.alt = `Obra "${obra.titulo}" por ${obra.artista}, técnica: ${obra.tecnica}`;
-            imgObra.className = "obra-img";
-            divObra.appendChild(imgObra);
-            
-            
-            let btnValorar = document.createElement("button");
-            btnValorar.textContent = "Valorar obra";
-            btnValorar.onclick = () => valorarObra(obra.id);
-            divObra.appendChild(btnValorar);
-            
-            let stats = document.createElement("p");
-            stats.textContent = `Visitas: ${obra.visitas} | Valoración: ${obra.valoracion}`;
-            divObra.appendChild(stats);
-            
-            listaDeObras.appendChild(divObra);
-        });
-        
-        tituloObrasRegistradas.textContent = `Obras en Galería: ${ListaDeObras.length}`;
-        
-        if (ListaDeObras.length >= 8) {
-            tituloObrasRegistradas.textContent += " - Exposición lista";
-            
-            let anchorBotonExposicion = document.createElement("a");
-            anchorBotonExposicion.href = "./pages/exposicion.html";
-            formulario.appendChild(anchorBotonExposicion);
-            
-            let botonExposicion = document.createElement("button");
-            botonExposicion.id = "botonExposicion";
-            botonExposicion.textContent = "Iniciar Exposición";
-            botonExposicion.type = "button";
-            anchorBotonExposicion.appendChild(botonExposicion);
-            
-            if (botonAgregar) {
-                formulario.removeChild(botonAgregar);
+function agregarAlCarrito(listaDibujos) {
+   const addButtons = document.querySelectorAll(".dibujoAgregar");
+   addButtons.forEach(button => {
+      button.onclick = async (e) => {
+         const dibujoId = e.currentTarget.id;
+         const selectedDibujo = listaDibujos.find(dibujo => dibujo.id == dibujoId);
+         if (selectedDibujo) {
+            try {
+               await dibujoChecker(selectedDibujo);
+               cartDibujos.push(selectedDibujo);
+               localStorage.setItem("cartDibujos", JSON.stringify(cartDibujos));
+               renderCarrito(cartDibujos);
+               Swal.fire({
+                  icon: 'success',
+                  title: 'Agregado al carrito',
+                  text: `"${selectedDibujo.nombre}" fue agregado correctamente.`,
+                  timer: 1500,
+                  showConfirmButton: false
+               });
+            } catch (error) {
+               Swal.fire({
+                  icon: 'error',
+                  title: 'Sin stock',
+                  text: error,
+               });
             }
-            
-            ListaDeObras.sort((a, b) => a.id - b.id);
-            localStorage.setItem("obras", JSON.stringify(ListaDeObras));
-        }
-    }
-    
-    // C
-    const tecnicas = ["Lapiz", "Acuarela", "Acrílico", "Digital"];
-    for (let i = 1; i <= 7; i++) {
-        ListaDeObras.push({
-            id: i,
-            titulo: `Obra maestra ${i}`,
-            artista: `Artista ${i}`,
-            tecnica: tecnicas[i % tecnicas.length],
-            valoracion: Math.floor(Math.random() * 5) + 1,
-            visitas: Math.floor(Math.random() * 100)
-        });
-    }
-    actualizarListaObras();
-}
-
-// Función para calificar
-function valorarObra(id) {
-    const obra = ListaDeObras.find(o => o.id === id);
-    if (obra) {
-        obra.valoracion += 1;
-        obra.visitas += 1;
-        actualizarListaObras();
-    }
+         }
+      }
+   });
 }
 
 
-const obrasEnExposicion = JSON.parse(localStorage.getItem('obras'));
-let container_exposicion = document.getElementById("container_exposicion");
-let contenedorObras = document.getElementById("contenedorObras");
-
-if (container_exposicion && obrasEnExposicion && contenedorObras) {
-    obrasEnExposicion.forEach(obra => {
-        let divObra = document.createElement("div");
-        divObra.className = "obra-exposicion";
-        
-        let titulo = document.createElement("h3");
-        titulo.textContent = obra.titulo;
-        
-        let artista = document.createElement("p");
-        artista.textContent = `Artista: ${obra.artista}`;
-        
-        let tecnica = document.createElement("p");
-        tecnica.textContent = `Técnica: ${obra.tecnica}`;
-        
-        let imgObra = document.createElement("img");
-        imgObra.src = "https://placehold.co/400x300";
-        imgObra.alt = `Obra "${obra.titulo}" en exposición`;
-        imgObra.className = "obra-exposicion-img";
-        
-        let formValoracion = document.createElement("div");
-        let labelValoracion = document.createElement("label");
-        labelValoracion.textContent = "Valoración (1-5):";
-        
-        let inputValoracion = document.createElement("input");
-        inputValoracion.type = "number";
-        inputValoracion.min = 1;
-        inputValoracion.max = 5;
-        inputValoracion.id = `valoracion-${obra.id}`;
-        
-        let btnEnviarValoracion = document.createElement("button");
-        btnEnviarValoracion.textContent = "Enviar valoración";
-        btnEnviarValoracion.onclick = () => {
-            const valor = parseInt(document.getElementById(`valoracion-${obra.id}`).value);
-            if (valor >= 1 && valor <= 5) {
-                obra.valoracion += valor;
-                obra.visitas += 1;
-                alert(`¡Gracias por valorar "${obra.titulo}"!`);
-            }
-        };
-        
-        formValoracion.appendChild(labelValoracion);
-        formValoracion.appendChild(inputValoracion);
-        formValoracion.appendChild(btnEnviarValoracion);
-        
-        divObra.appendChild(titulo);
-        divObra.appendChild(artista);
-        divObra.appendChild(tecnica);
-        divObra.appendChild(imgObra);
-        divObra.appendChild(formValoracion);
-        
-        contenedorObras.appendChild(divObra);
-    });
-
-    // Botón finalizar y mostrar ranking
-    let botonFinalizarExposicion = document.getElementById("terminarExposicion");
-    if (botonFinalizarExposicion) {
-        botonFinalizarExposicion.onclick = () => {
-    
-            obrasEnExposicion.sort((a, b) => {
-                if (b.valoracion === a.valoracion) {
-                    return b.visitas - a.visitas;
-                }
-                return b.valoracion - a.valoracion;
-            });
-
-            // Aca hay masomenos lo que seria un rankin de los dibujos mas vendidos
-            let contenedorResultados = document.getElementById("contenedorResultadosExposicion");
-            contenedorResultados.textContent = "";
-            
-            let tituloRanking = document.createElement("h2");
-            tituloRanking.textContent = "Ranking de Obras más Valoradas";
-            contenedorResultados.appendChild(tituloRanking);
-            
-            obrasEnExposicion.forEach((obra, index) => {
-                let divResultado = document.createElement("div");
-                divResultado.className = "resultado-obra";
-                
-                let puesto = document.createElement("h3");
-                puesto.textContent = `${index + 1}° Puesto`;
-                
-                let infoObra = document.createElement("p");
-                infoObra.textContent = `"${obra.titulo}" - ${obra.artista} (Valoración: ${obra.valoracion}, Visitas: ${obra.visitas})`;
-                
-                divResultado.appendChild(puesto);
-                divResultado.appendChild(infoObra);
-                
-                contenedorResultados.appendChild(divResultado);
-            });
-        };
-    }
+function renderCarrito(cartItems) {
+   cartContainer.innerHTML = ""; 
+   cartItems.forEach(dibujo => {
+      const div = document.createElement("div");
+      div.innerHTML = `
+         <h4>${dibujo.nombre}</h4>
+         <p>Precio: ${dibujo.precio}</p>
+      `;
+      cartContainer.appendChild(div);
+   });
 }
+
+obtenerDibujos();
+renderCarrito(cartDibujos);
